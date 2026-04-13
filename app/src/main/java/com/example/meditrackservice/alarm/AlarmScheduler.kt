@@ -41,6 +41,7 @@ object AlarmScheduler {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("alarma_id", alarma.id)
             putExtra("medicina_nombre", alarma.medicinaNombre)
+            putExtra("forma_farmaceutica", alarma.formaFarmaceutica)
             putExtra("fecha_hora", alarma.fechaHora)
         }
 

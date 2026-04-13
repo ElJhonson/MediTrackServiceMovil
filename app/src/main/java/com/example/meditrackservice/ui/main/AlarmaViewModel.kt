@@ -1,6 +1,7 @@
 package com.example.meditrackservice.ui.main
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -39,6 +40,7 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
 
                 val apiService = RetrofitClient.create { token }
                 val resultado = apiService.obtenerAlarmasHoy(pacienteId = null)
+                Log.d("AlarmaViewModel", "Primera alarma: ${resultado.firstOrNull()}")
                 val pendientes = resultado.filter { it.estado == "PENDIENTE" }
 
                 _alarmas.value = resultado
