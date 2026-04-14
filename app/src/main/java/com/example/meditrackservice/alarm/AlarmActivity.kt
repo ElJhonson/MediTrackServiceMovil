@@ -16,12 +16,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+// alarm/AlarmActivity.kt
 class AlarmActivity : ComponentActivity() {
+
+    private var alarmaId = -1L
+    private var medicinaNombre = ""
+    private var formaFarmaceutica = ""
+    private var fechaHora = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Mostrar sobre la pantalla de bloqueo
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -34,46 +39,34 @@ class AlarmActivity : ComponentActivity() {
             )
         }
 
-        // ← reemplaza onBackPressed, bloquea el botón atrás
-        onBackPressedDispatcher.addCallback(this) {
-            // No hacer nada → fuerza al usuario a elegir una opción
-        }
+        onBackPressedDispatcher.addCallback(this) { }
 
-        startService(Intent(this, AlarmSoundService::class.java))
+        cargarDatos(intent)
+        mostrarPantalla()
+    }
 
-        val alarmaId = intent.getLongExtra("alarma_id", -1)
-        val medicinaNombre = intent.getStringExtra("medicina_nombre") ?: "Medicina"
-        val formaFarmaceutica = intent.getStringExtra("forma_farmaceutica") ?: ""
-        val fechaHora = intent.getStringExtra("fecha_hora") ?: ""
-
-        val hora = if (fechaHora.length >= 16) fechaHora.substring(11, 16) else ""
-
-        setContent {
-            MediTrackServiceTheme {
-                AlarmScreen(
-                    hora = hora,
-                    medicinaNombre = medicinaNombre,
-                    formaFarmaceutica = formaFarmaceutica,
-                    onAccion = { estado ->
-                        registrarAccion(alarmaId, estado)
-                    }
-                )
-            }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Agregar a la cola en vez de reemplazar la pantalla actual
+        val nuevaAlarma = AlarmQueue.AlarmaData(
+            alarmaId = intent.getLongExtra("alarma_id", -1),
+            medicinaNombre = intent.getStringExtra("medicina_nombre") ?: "Medicina",
+            formaFarmaceutica = intent.getStringExtra("forma_farmaceutica") ?: "",
+            fechaHora = intent.getStringExtra("fecha_hora") ?: ""
+        )
+        if (nuevaAlarma.alarmaId != -1L) {
+            AlarmQueue.agregar(nuevaAlarma)
         }
     }
 
-    // alarm/AlarmActivity.kt
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        // Si llega una nueva alarma mientras esta pantalla está abierta
-        // detener sonido anterior y cargar los datos de la nueva
-        stopService(Intent(this, AlarmSoundService::class.java))
-        setIntent(intent)
+    private fun cargarDatos(intent: Intent) {
+        alarmaId = intent.getLongExtra("alarma_id", -1)
+        medicinaNombre = intent.getStringExtra("medicina_nombre") ?: "Medicina"
+        formaFarmaceutica = intent.getStringExtra("forma_farmaceutica") ?: ""
+        fechaHora = intent.getStringExtra("fecha_hora") ?: ""
+    }
 
-        val alarmaId = intent.getLongExtra("alarma_id", -1)
-        val medicinaNombre = intent.getStringExtra("medicina_nombre") ?: "Medicina"
-        val formaFarmaceutica = intent.getStringExtra("forma_farmaceutica") ?: ""
-        val fechaHora = intent.getStringExtra("fecha_hora") ?: ""
+    private fun mostrarPantalla() {
         val hora = if (fechaHora.length >= 16) fechaHora.substring(11, 16) else ""
 
         startService(Intent(this, AlarmSoundService::class.java))
@@ -101,10 +94,21 @@ class AlarmActivity : ComponentActivity() {
                 val apiService = RetrofitClient.create { token }
                 apiService.actualizarEstado(alarmaId, estado)
             } catch (e: Exception) {
-                Log.e("AlarmActivity", "Error actualizando estado: ${e.message}")
+                Log.e("AlarmActivity", "Error: ${e.message}")
             }
         }
 
-        finish()
+        // ← Verificar si hay más alarmas en la cola
+        val siguiente = AlarmQueue.siguiente()
+        if (siguiente != null) {
+            // Cargar la siguiente alarma en vez de cerrar
+            this.alarmaId = siguiente.alarmaId
+            this.medicinaNombre = siguiente.medicinaNombre
+            this.formaFarmaceutica = siguiente.formaFarmaceutica
+            this.fechaHora = siguiente.fechaHora
+            mostrarPantalla()
+        } else {
+            finish()
+        }
     }
 }

@@ -46,6 +46,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.cargarAlarmasHoy()
+        viewModel.iniciarSyncEnTiempoReal()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.detenerSyncEnTiempoReal()
+    }
+
     private fun solicitarPermisoAlarmas() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager

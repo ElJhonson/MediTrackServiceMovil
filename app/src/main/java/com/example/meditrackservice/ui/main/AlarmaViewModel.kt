@@ -11,6 +11,8 @@ import com.example.meditrackservice.data.api.RetrofitClient
 import com.example.meditrackservice.data.local.TokenDataStoreProvider
 import com.example.meditrackservice.data.model.AlarmaResponse
 import com.example.meditrackservice.data.model.RefreshRequest
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
@@ -55,6 +57,7 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
                         if (refreshExitoso) cargarAlarmasHoy()
                         else _estado.value = AlarmaEstado.SesionExpirada
                     }
+
                     else -> _estado.value =
                         AlarmaEstado.Error("Error del servidor: ${e.code()}")
                 }
@@ -74,6 +77,22 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
         } catch (e: Exception) {
             false
         }
+    }
+
+    private var syncJob: Job? = null
+
+    fun iniciarSyncEnTiempoReal() {
+        syncJob = viewModelScope.launch {
+            while (true) {
+                delay(30_000)
+                cargarAlarmasHoy()
+            }
+        }
+    }
+
+    fun detenerSyncEnTiempoReal() {
+        syncJob?.cancel()
+        syncJob = null
     }
 }
 
