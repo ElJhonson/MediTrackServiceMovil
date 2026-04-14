@@ -4,12 +4,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Cancel
@@ -19,7 +23,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButtonDefaults.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,12 +43,10 @@ fun MainScreen(
     val alarmas by viewModel.alarmas.observeAsState(emptyList())
     val estado by viewModel.estado.observeAsState()
 
-    // Cargar alarmas al entrar
     LaunchedEffect(Unit) {
         viewModel.cargarAlarmasHoy()
     }
 
-    // Sesión expirada → regresar al login
     LaunchedEffect(estado) {
         if (estado is AlarmaEstado.SesionExpirada) onSesionExpirada()
     }
@@ -55,35 +56,46 @@ fun MainScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+
+        // 🔥 HEADER (más limpio)
         Text(
-            text = "Mis alarmas de hoy",
-            style = MaterialTheme.typography.headlineSmall,
+            text = "Hoy",
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
         when (estado) {
+
             is AlarmaEstado.Cargando -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator()
                 }
             }
+
             is AlarmaEstado.Error -> {
                 Text(
                     text = (estado as AlarmaEstado.Error).mensaje,
                     color = MaterialTheme.colorScheme.error
                 )
             }
+
             else -> {
+
                 if (alarmas.isEmpty()) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("No tienes alarmas programadas para hoy")
+                        Text("No tienes alarmas hoy")
                     }
                 } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
                         items(alarmas) { alarma ->
                             AlarmaCard(alarma)
                         }
@@ -96,54 +108,57 @@ fun MainScreen(
 
 @Composable
 fun AlarmaCard(alarma: AlarmaResponse) {
-    val hora = alarma.fechaHora.substring(11, 16) // "08:00"
 
-    val colorEstado = when (alarma.estado) {
-        "TOMADA"  -> Color(0xFF388E3C)
-        "OMITIDA" -> Color(0xFFD32F2F)
-        else      -> Color(0xFF1976D2) // PENDIENTE
+    val hora = alarma.fechaHora.substring(11, 16)
+
+    val (colorEstado, icono) = when (alarma.estado) {
+        "TOMADA" -> Pair(Color(0xFF4CAF50), Icons.Default.CheckCircle)
+        "OMITIDA" -> Pair(Color(0xFFF44336), Icons.Default.Cancel)
+        else -> Pair(MaterialTheme.colorScheme.primary, Icons.Default.Alarm)
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(4.dp)
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Hora
-            Text(
-                text = hora,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.width(64.dp)
-            )
 
-            // Nombre medicina
-            Column(modifier = Modifier.weight(1f)) {
+            // Hora en círculo
+            Box(
+                modifier = Modifier
+                    .size(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = alarma.medicinaNombre,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = alarma.estado,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colorEstado
+                    text = hora,
+                    fontWeight = FontWeight.Bold
                 )
             }
 
-            // Ícono estado
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = alarma.medicinaNombre,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                Text(
+                    text = alarma.estado,
+                    color = colorEstado,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             Icon(
-                imageVector = when (alarma.estado) {
-                    "TOMADA"  -> Icons.Default.CheckCircle
-                    "OMITIDA" -> Icons.Default.Cancel
-                    else      -> Icons.Default.Alarm
-                },
-                contentDescription = alarma.estado,
+                imageVector = icono,
+                contentDescription = null,
                 tint = colorEstado
             )
         }

@@ -40,7 +40,7 @@ fun AlarmScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF1A237E)), // Azul oscuro
+            .background(Color(0xFFFF5722)),
         contentAlignment = Alignment.Center
     ) {
         Column(
