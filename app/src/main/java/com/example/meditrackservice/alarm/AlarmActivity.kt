@@ -62,6 +62,34 @@ class AlarmActivity : ComponentActivity() {
         }
     }
 
+    // alarm/AlarmActivity.kt
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // Si llega una nueva alarma mientras esta pantalla está abierta
+        // detener sonido anterior y cargar los datos de la nueva
+        stopService(Intent(this, AlarmSoundService::class.java))
+        setIntent(intent)
+
+        val alarmaId = intent.getLongExtra("alarma_id", -1)
+        val medicinaNombre = intent.getStringExtra("medicina_nombre") ?: "Medicina"
+        val formaFarmaceutica = intent.getStringExtra("forma_farmaceutica") ?: ""
+        val fechaHora = intent.getStringExtra("fecha_hora") ?: ""
+        val hora = if (fechaHora.length >= 16) fechaHora.substring(11, 16) else ""
+
+        startService(Intent(this, AlarmSoundService::class.java))
+
+        setContent {
+            MediTrackServiceTheme {
+                AlarmScreen(
+                    hora = hora,
+                    medicinaNombre = medicinaNombre,
+                    formaFarmaceutica = formaFarmaceutica,
+                    onAccion = { estado -> registrarAccion(alarmaId, estado) }
+                )
+            }
+        }
+    }
+
     private fun registrarAccion(alarmaId: Long, estado: String) {
         stopService(Intent(this, AlarmSoundService::class.java))
 

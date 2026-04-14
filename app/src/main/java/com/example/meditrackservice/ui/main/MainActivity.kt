@@ -1,9 +1,12 @@
 package com.example.meditrackservice.ui.main
 
+
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -30,6 +33,7 @@ class MainActivity : ComponentActivity() {
 
         // Solicitar permiso de notificaciones en Android 13+
         solicitarPermisoNotificaciones()
+        solicitarPermisoFullScreen()
         SyncScheduler.iniciar(this)
 
         setContent {
@@ -62,6 +66,26 @@ class MainActivity : ComponentActivity() {
                     arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
                     1001
                 )
+            }
+        }
+    }
+
+    // ui/main/MainActivity.kt
+    private fun solicitarPermisoFullScreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            if (!notificationManager.canUseFullScreenIntent()) {
+                try {
+                    val intent = Intent("android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENTS").apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Si el dispositivo no soporta esta pantalla, abrir ajustes generales
+                    startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.parse("package:$packageName")
+                    })
+                }
             }
         }
     }
