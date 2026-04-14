@@ -9,7 +9,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.addCallback
 import com.example.meditrackservice.data.api.RetrofitClient
+import com.example.meditrackservice.data.local.AccionesPendientesStore
 import com.example.meditrackservice.data.local.TokenDataStoreProvider
+import com.example.meditrackservice.sync.RetryScheduler
 import com.example.meditrackservice.ui.theme.MediTrackServiceTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,8 +112,10 @@ class AlarmActivity : ComponentActivity() {
                 )
                 apiService.actualizarEstado(alarmaId, estado)
             } catch (e: Exception) {
-                Log.e("AlarmActivity", "Error: ${e.message}")
-            }
+            Log.w("AlarmActivity", "Sin internet, guardando acción pendiente")
+            AccionesPendientesStore.guardar(applicationContext, alarmaId, estado)
+            RetryScheduler.programar(applicationContext)
+        }
         }
 
         val siguiente = AlarmQueue.siguiente()

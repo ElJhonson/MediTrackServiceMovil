@@ -50,7 +50,7 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
                         }
                     },
                     onSessionExpired = {
-                        _estado.value = AlarmaEstado.SesionExpirada
+                        _estado.postValue(AlarmaEstado.SesionExpirada)
                     }
                 )
 
