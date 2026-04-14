@@ -1,7 +1,6 @@
 package com.example.meditrackservice.ui.main
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -27,22 +26,35 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
     private val _estado = MutableLiveData<AlarmaEstado>()
     val estado: LiveData<AlarmaEstado> = _estado
 
+    // ui/main/AlarmaViewModel.kt
     fun cargarAlarmasHoy() {
         viewModelScope.launch {
             _estado.value = AlarmaEstado.Cargando
 
             try {
-                // ← Leer el token AQUÍ, justo antes de usarlo
                 val token = tokenDataStore.accessToken.first()
+                val refreshToken = tokenDataStore.refreshToken.first()
 
                 if (token.isNullOrBlank()) {
                     _estado.value = AlarmaEstado.SesionExpirada
                     return@launch
                 }
 
-                val apiService = RetrofitClient.create { token }
+                // ← pasar refresh token y callbacks al crear el cliente
+                val apiService = RetrofitClient.create(
+                    tokenProvider = { token },           // ← token real
+                    refreshTokenProvider = { refreshToken },
+                    onTokenRefreshed = { nuevoToken ->
+                        viewModelScope.launch {
+                            tokenDataStore.guardarTokens(nuevoToken, refreshToken ?: "")
+                        }
+                    },
+                    onSessionExpired = {
+                        _estado.value = AlarmaEstado.SesionExpirada
+                    }
+                )
+
                 val resultado = apiService.obtenerAlarmasHoy(pacienteId = null)
-                Log.d("AlarmaViewModel", "Primera alarma: ${resultado.firstOrNull()}")
                 val pendientes = resultado.filter { it.estado == "PENDIENTE" }
 
                 _alarmas.value = resultado
@@ -51,16 +63,7 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
                 AlarmScheduler.programarAlarmas(context, pendientes)
 
             } catch (e: HttpException) {
-                when (e.code()) {
-                    401, 403 -> {
-                        val refreshExitoso = intentarRefresh()
-                        if (refreshExitoso) cargarAlarmasHoy()
-                        else _estado.value = AlarmaEstado.SesionExpirada
-                    }
-
-                    else -> _estado.value =
-                        AlarmaEstado.Error("Error del servidor: ${e.code()}")
-                }
+                _estado.value = AlarmaEstado.Error("Error del servidor: ${e.code()}")
             } catch (e: Exception) {
                 _estado.value = AlarmaEstado.Error("Sin conexión a internet")
             }
@@ -70,7 +73,15 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
     private suspend fun intentarRefresh(): Boolean {
         return try {
             val refreshToken = tokenDataStore.refreshToken.first() ?: return false
-            val tempApi = RetrofitClient.create { null }
+
+            // ← pasar todos los parámetros requeridos
+            val tempApi = RetrofitClient.create(
+                tokenProvider = { null },
+                refreshTokenProvider = { null },
+                onTokenRefreshed = {},
+                onSessionExpired = {}
+            )
+
             val response = tempApi.refresh(RefreshRequest(refreshToken))
             tokenDataStore.guardarTokens(response.accessToken, refreshToken)
             true

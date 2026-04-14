@@ -25,7 +25,12 @@ class BootReceiver : BroadcastReceiver() {
 
                 if (token.isNullOrBlank()) return@launch
 
-                val apiService = RetrofitClient.create { token }
+                val apiService = RetrofitClient.create(
+                    tokenProvider = { token },           // ← token real
+                    refreshTokenProvider = { null },
+                    onTokenRefreshed = {},
+                    onSessionExpired = {}
+                )
                 val alarmas = apiService.obtenerAlarmasHoy(pacienteId = null)
                 val pendientes = alarmas.filter { it.estado == "PENDIENTE" }
 

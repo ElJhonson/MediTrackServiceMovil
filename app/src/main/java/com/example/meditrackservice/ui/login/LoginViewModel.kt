@@ -25,7 +25,12 @@ class LoginViewModel(private val context: Application) : AndroidViewModel(contex
 
     init {
         // Inicializar Retrofit sin token (login no lo necesita)
-        apiService = RetrofitClient.create { null }
+        apiService = RetrofitClient.create(
+            tokenProvider = { null },
+            refreshTokenProvider = { null },
+            onTokenRefreshed = {},
+            onSessionExpired = {}
+        )
     }
 
     fun login(telefono: String, contrasena: String) {

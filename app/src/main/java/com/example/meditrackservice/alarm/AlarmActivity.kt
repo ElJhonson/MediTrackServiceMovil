@@ -91,17 +91,31 @@ class AlarmActivity : ComponentActivity() {
             try {
                 val token = TokenDataStoreProvider.getInstance(applicationContext)
                     .accessToken.first()
-                val apiService = RetrofitClient.create { token }
+                val refreshToken = TokenDataStoreProvider.getInstance(applicationContext)
+                    .refreshToken.first()
+
+                // ← con refresh automático
+                val apiService = RetrofitClient.create(
+                    tokenProvider = { token },           // ← token real
+                    refreshTokenProvider = { refreshToken },
+                    onTokenRefreshed = { nuevoToken ->
+                        scope.launch {
+                            TokenDataStoreProvider.getInstance(applicationContext)
+                                .guardarTokens(nuevoToken, refreshToken ?: "")
+                        }
+                    },
+                    onSessionExpired = {
+                        Log.w("AlarmActivity", "Sesión expirada")
+                    }
+                )
                 apiService.actualizarEstado(alarmaId, estado)
             } catch (e: Exception) {
                 Log.e("AlarmActivity", "Error: ${e.message}")
             }
         }
 
-        // ← Verificar si hay más alarmas en la cola
         val siguiente = AlarmQueue.siguiente()
         if (siguiente != null) {
-            // Cargar la siguiente alarma en vez de cerrar
             this.alarmaId = siguiente.alarmaId
             this.medicinaNombre = siguiente.medicinaNombre
             this.formaFarmaceutica = siguiente.formaFarmaceutica

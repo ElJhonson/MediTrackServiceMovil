@@ -5,13 +5,27 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+// data/api/RetrofitClient.kt
 object RetrofitClient {
 
-    private const val BASE_URL = "http://10.34.0.171:8080/"
+    const val BASE_URL = "http://10.34.0.171:8080/"
 
-    fun create(tokenProvider: () -> String?): ApiService {
+    fun create(
+        tokenProvider: () -> String?,
+        refreshTokenProvider: () -> String? = { null },
+        onTokenRefreshed: (String) -> Unit = {},
+        onSessionExpired: () -> Unit = {}
+    ): ApiService {
+
         val client = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(tokenProvider))
+            .addInterceptor(
+                AuthInterceptor(
+                    tokenProvider = tokenProvider,
+                    refreshTokenProvider = refreshTokenProvider,
+                    onTokenRefreshed = onTokenRefreshed,
+                    onSessionExpired = onSessionExpired
+                )
+            )
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             })

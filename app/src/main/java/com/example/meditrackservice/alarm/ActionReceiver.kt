@@ -28,7 +28,12 @@ class ActionReceiver : BroadcastReceiver() {
             try {
                 val tokenDataStore = TokenDataStoreProvider.getInstance(context)
                 val token = tokenDataStore.accessToken.first()
-                val apiService = RetrofitClient.create { token }
+                val apiService = RetrofitClient.create(
+                    tokenProvider = { null },
+                    refreshTokenProvider = { null },
+                    onTokenRefreshed = {},
+                    onSessionExpired = {}
+                )
 
                 apiService.actualizarEstado(alarmaId, estado)
 
