@@ -20,9 +20,17 @@ object AlarmScheduler {
 
     fun programarAlarmas(context: Context, alarmas: List<AlarmaResponse>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        cancelarTodasLasAlarmas(context, alarmas.map { it.id })
 
         alarmas.forEach { alarma ->
             programarUna(context, alarmManager, alarma)
+        }
+    }
+
+    private fun cancelarTodasLasAlarmas(context: Context, alarmaIds: List<Long>) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmaIds.forEach { id ->
+            cancelarAlarma(context, id)
         }
     }
 

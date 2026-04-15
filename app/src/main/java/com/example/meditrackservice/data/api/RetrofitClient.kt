@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 // data/api/RetrofitClient.kt
 object RetrofitClient {
 
-    const val BASE_URL = "http://10.34.0.171:8080/"
+    const val BASE_URL = "http://10.221.65.209:8080/"
 
     fun create(
         tokenProvider: () -> String?,

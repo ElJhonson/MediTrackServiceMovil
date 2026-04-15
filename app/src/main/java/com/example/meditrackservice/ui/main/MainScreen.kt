@@ -57,7 +57,6 @@ fun MainScreen(
             .padding(16.dp)
     ) {
 
-        // 🔥 HEADER (más limpio)
         Text(
             text = "Hoy",
             style = MaterialTheme.typography.headlineMedium,
