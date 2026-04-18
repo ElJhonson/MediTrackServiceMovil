@@ -13,6 +13,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.example.meditrackservice.data.local.AlarmasProgramadasStore
 import com.example.meditrackservice.sync.SyncScheduler
 import com.example.meditrackservice.ui.login.LoginActivity
 import com.example.meditrackservice.ui.theme.MediTrackServiceTheme
@@ -103,6 +104,7 @@ class MainActivity : ComponentActivity() {
 
     private fun irAlLogin() {
         SyncScheduler.cancelar(this)
+        AlarmasProgramadasStore.limpiar(this)
         startActivity(Intent(this, LoginActivity::class.java))
         finish()
     }

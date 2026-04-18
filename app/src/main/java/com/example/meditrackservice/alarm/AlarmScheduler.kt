@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import com.example.meditrackservice.data.local.AlarmasProgramadasStore
 
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -20,11 +21,26 @@ object AlarmScheduler {
 
     fun programarAlarmas(context: Context, alarmas: List<AlarmaResponse>) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        cancelarTodasLasAlarmas(context, alarmas.map { it.id })
 
+        val idsNuevos = alarmas.map { it.id }
+        val idsAnteriores = AlarmasProgramadasStore.obtenerIds(context)
+
+        // ← Cancelar las que ya no existen o fueron modificadas
+        val idsCancelar = idsAnteriores.filter { it !in idsNuevos }
+        idsCancelar.forEach { id ->
+            cancelarAlarma(context, id)
+        }
+
+        // ← Cancelar todas las actuales para reprogramar con datos frescos
+        idsNuevos.forEach { id -> cancelarAlarma(context, id) }
+
+        // ← Programar las nuevas
         alarmas.forEach { alarma ->
             programarUna(context, alarmManager, alarma)
         }
+
+        // ← Guardar los IDs programados
+        AlarmasProgramadasStore.guardarIds(context, idsNuevos)
     }
 
     private fun cancelarTodasLasAlarmas(context: Context, alarmaIds: List<Long>) {
@@ -35,7 +51,6 @@ object AlarmScheduler {
     }
 
     fun programarUna(context: Context, alarmManager: AlarmManager, alarma: AlarmaResponse) {
-
         val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
         val fechaLocal = LocalDateTime.parse(alarma.fechaHora, formatter)
         val zonaHoraria = ZoneId.of("America/Mexico_City")
@@ -60,7 +75,6 @@ object AlarmScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // ← FIX: verificar permiso antes de programar
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (alarmManager.canScheduleExactAlarms()) {
@@ -70,7 +84,6 @@ object AlarmScheduler {
                         pendingIntent
                     )
                 } else {
-                    // Sin permiso → usar setAndAllowWhileIdle (menos exacto pero funciona)
                     alarmManager.setAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
                         triggerMillis,
@@ -78,7 +91,6 @@ object AlarmScheduler {
                     )
                 }
             } else {
-                // Android 11 o menor → sin restricción
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerMillis,
@@ -87,7 +99,6 @@ object AlarmScheduler {
             }
         } catch (e: SecurityException) {
             Log.e("AlarmScheduler", "Sin permiso para alarmas exactas: ${e.message}")
-            // Fallback sin exactitud
             alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 triggerMillis,
