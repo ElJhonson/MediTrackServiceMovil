@@ -13,7 +13,12 @@ object AlarmQueue {
     private val cola = mutableListOf<AlarmaData>()
 
     fun agregar(alarma: AlarmaData) {
-        synchronized(this) { cola.add(alarma) }
+        synchronized(this) {
+            // ← No agregar si ya existe en la cola
+            if (cola.none { it.alarmaId == alarma.alarmaId }) {
+                cola.add(alarma)
+            }
+        }
     }
 
     fun siguiente(): AlarmaData? {
@@ -24,5 +29,14 @@ object AlarmQueue {
 
     fun hayPendientes(): Boolean {
         return synchronized(this) { cola.isNotEmpty() }
+    }
+
+    // ← función nueva
+    fun contiene(alarmaId: Long): Boolean {
+        return synchronized(this) { cola.any { it.alarmaId == alarmaId } }
+    }
+
+    fun limpiar() {
+        synchronized(this) { cola.clear() }
     }
 }

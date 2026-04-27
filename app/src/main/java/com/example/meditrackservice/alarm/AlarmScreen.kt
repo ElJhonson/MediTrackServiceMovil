@@ -13,6 +13,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 // alarm/AlarmScreen.kt
 @Composable
@@ -29,18 +35,41 @@ fun AlarmScreen(
     formaFarmaceutica: String,
     onAccion: (String) -> Unit
 ) {
+    var tiempoRestante by remember { mutableStateOf(300) } // 5 minutos en segundos
+    var countdown by remember { mutableStateOf(true) }
+
+    // Countdown automático
+    LaunchedEffect(countdown) {
+        while (tiempoRestante > 0) {
+            delay(1000)
+            tiempoRestante--
+        }
+        // Llegó a 0 → marcar como OMITIDA automáticamente
+        onAccion("OMITIDA")
+    }
+
+    val minutos = tiempoRestante / 60
+    val segundos = tiempoRestante % 60
+    val tiempoFormato = "%02d:%02d".format(minutos, segundos)
+
+    // Color del contador cambia según urgencia
+    val colorContador = when {
+        tiempoRestante > 180 -> Color.White               // > 3 min → blanco
+        tiempoRestante > 60  -> Color(0xFFFFEB3B)         // > 1 min → amarillo
+        else                 -> Color(0xFFF44336)         // < 1 min → rojo
+    }
+
     val icono = when (formaFarmaceutica.uppercase()) {
-        "CAPSULA", "CÁPSULA" -> "💊"
-        "INYECCION", "INYECCIÓN" -> "💉"
-        "JARABE", "LIQUIDO", "LÍQUIDO" -> "🧴"
-        "TABLETA", "COMPRIMIDO" -> "⬜"
-        else -> "💊"
+        "TABLETA"  -> "⬜"
+        "CAPSULA"  -> "💊"
+        "JARABE"   -> "🧴"
+        else       -> "💊"
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFF5722)),
+            .background(Color(0xFF1A237E)),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -48,11 +77,8 @@ fun AlarmScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier.padding(32.dp)
         ) {
-
-            // Ícono grande
             Text(text = icono, fontSize = 80.sp)
 
-            // Hora
             Text(
                 text = hora,
                 fontSize = 64.sp,
@@ -60,7 +86,6 @@ fun AlarmScreen(
                 color = Color.White
             )
 
-            // Nombre medicina
             Text(
                 text = medicinaNombre,
                 fontSize = 28.sp,
@@ -69,7 +94,6 @@ fun AlarmScreen(
                 textAlign = TextAlign.Center
             )
 
-            // Forma farmacéutica
             Text(
                 text = formaFarmaceutica,
                 fontSize = 18.sp,
@@ -77,13 +101,24 @@ fun AlarmScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // ← Contador regresivo
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Se marcará como omitida en:",
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+                Text(
+                    text = tiempoFormato,
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colorContador
+                )
+            }
 
-            // Botones
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Botón OMITIDA
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(
                     onClick = { onAccion("OMITIDA") },
                     colors = ButtonDefaults.buttonColors(
@@ -93,14 +128,9 @@ fun AlarmScreen(
                         .weight(1f)
                         .height(64.dp)
                 ) {
-                    Text(
-                        text = "❌ Omitir",
-                        fontSize = 18.sp,
-                        color = Color.White
-                    )
+                    Text("❌ Omitir", fontSize = 18.sp, color = Color.White)
                 }
 
-                // Botón TOMADA
                 Button(
                     onClick = { onAccion("TOMADA") },
                     colors = ButtonDefaults.buttonColors(
@@ -110,11 +140,7 @@ fun AlarmScreen(
                         .weight(1f)
                         .height(64.dp)
                 ) {
-                    Text(
-                        text = "✅ Tomada",
-                        fontSize = 18.sp,
-                        color = Color.White
-                    )
+                    Text("✅ Tomada", fontSize = 18.sp, color = Color.White)
                 }
             }
         }

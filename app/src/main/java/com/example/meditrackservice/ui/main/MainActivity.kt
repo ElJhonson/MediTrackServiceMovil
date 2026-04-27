@@ -13,6 +13,7 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import com.example.meditrackservice.alarm.AlarmForegroundService
 import com.example.meditrackservice.data.local.AlarmasProgramadasStore
 import com.example.meditrackservice.sync.SyncScheduler
 import com.example.meditrackservice.ui.login.LoginActivity
@@ -36,6 +37,14 @@ class MainActivity : ComponentActivity() {
         solicitarPermisoNotificaciones()
         solicitarPermisoFullScreen()
         SyncScheduler.iniciar(this)
+
+        val serviceIntent = Intent(this, AlarmForegroundService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(serviceIntent)
+        } else {
+            startService(serviceIntent)
+        }
+
 
         setContent {
             MediTrackServiceTheme {

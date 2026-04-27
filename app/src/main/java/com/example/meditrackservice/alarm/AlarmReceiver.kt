@@ -102,5 +102,27 @@ class AlarmReceiver : BroadcastReceiver() {
         if (tienePermiso) {
             NotificationManagerCompat.from(context).notify(alarmaId.toInt(), notificacion)
         }
+        programarOmisionAutomatica(context, alarmaId)
+
+    }
+
+    // alarm/AlarmReceiver.kt — agregar al final de lanzarAlarma()
+    private fun programarOmisionAutomatica(context: Context, alarmaId: Long) {
+        val inputData = androidx.work.Data.Builder()
+            .putLong("alarma_id", alarmaId)
+            .build()
+
+        // Ejecutar después de 5 minutos + 30 segundos de margen
+        val omitirRequest = androidx.work.OneTimeWorkRequestBuilder<OmitirAlarmaWorker>()
+            .setInputData(inputData)
+            .setInitialDelay(5, java.util.concurrent.TimeUnit.MINUTES)
+            .build()
+
+        androidx.work.WorkManager.getInstance(context)
+            .enqueueUniqueWork(
+                "omitir_alarma_$alarmaId",
+                androidx.work.ExistingWorkPolicy.KEEP,
+                omitirRequest
+            )
     }
 }

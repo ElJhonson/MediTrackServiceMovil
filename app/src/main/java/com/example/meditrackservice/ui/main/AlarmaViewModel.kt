@@ -5,16 +5,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.meditrackservice.alarm.AlarmQueue
 import com.example.meditrackservice.alarm.AlarmScheduler
 import com.example.meditrackservice.data.api.RetrofitClient
+import com.example.meditrackservice.data.local.AccionesPendientesStore
+import com.example.meditrackservice.data.local.AlarmasProgramadasStore
 import com.example.meditrackservice.data.local.TokenDataStoreProvider
 import com.example.meditrackservice.data.model.AlarmaResponse
 import com.example.meditrackservice.data.model.RefreshRequest
+import com.example.meditrackservice.sync.RetryScheduler
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class AlarmaViewModel(private val context: Application) : AndroidViewModel(context) {
 
@@ -26,7 +33,6 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
     private val _estado = MutableLiveData<AlarmaEstado>()
     val estado: LiveData<AlarmaEstado> = _estado
 
-    // ui/main/AlarmaViewModel.kt
     fun cargarAlarmasHoy() {
         viewModelScope.launch {
             _estado.value = AlarmaEstado.Cargando
@@ -40,9 +46,8 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
                     return@launch
                 }
 
-                // ← pasar refresh token y callbacks al crear el cliente
                 val apiService = RetrofitClient.create(
-                    tokenProvider = { token },           // ← token real
+                    tokenProvider = { token },
                     refreshTokenProvider = { refreshToken },
                     onTokenRefreshed = { nuevoToken ->
                         viewModelScope.launch {
@@ -55,18 +60,52 @@ class AlarmaViewModel(private val context: Application) : AndroidViewModel(conte
                 )
 
                 val resultado = apiService.obtenerAlarmasHoy(pacienteId = null)
-                val pendientes = resultado.filter { it.estado == "PENDIENTE" }
 
-                _alarmas.value = resultado
+                // ← Marcar como OMITIDA con 5 minutos de gracia
+                val ahora = LocalDateTime.now(ZoneId.of("America/Mexico_City"))
+                val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
+                resultado.filter { alarma ->
+                    alarma.estado == "PENDIENTE" &&
+                            LocalDateTime.parse(alarma.fechaHora, formatter)
+                                .plusMinutes(5)
+                                .isBefore(ahora)
+                }.forEach { alarma ->
+                    try {
+                        apiService.actualizarEstado(alarma.id, "OMITIDA")
+                    } catch (e: Exception) {
+                        AccionesPendientesStore.guardar(context, alarma.id, "OMITIDA")
+                        RetryScheduler.programar(context)
+                    }
+                }
+
+                // ← Recargar después de actualizar las omitidas
+                val actualizado = apiService.obtenerAlarmasHoy(pacienteId = null)
+                val pendientes = actualizado.filter { it.estado == "PENDIENTE" }
+
+                _alarmas.value = actualizado
                 _estado.value = AlarmaEstado.Exitoso
 
                 AlarmScheduler.programarAlarmas(context, pendientes)
 
             } catch (e: HttpException) {
-                _estado.value = AlarmaEstado.Error("Error del servidor: ${e.code()}")
+                _estado.postValue(AlarmaEstado.Error("Error del servidor: ${e.code()}"))
             } catch (e: Exception) {
-                _estado.value = AlarmaEstado.Error("Sin conexión a internet")
+                _estado.postValue(AlarmaEstado.Error("Sin conexión a internet"))
             }
+        }
+    }
+
+    fun cerrarSesion() {
+        viewModelScope.launch {
+            // Limpiar tokens
+            tokenDataStore.limpiarTokens()
+            // Cancelar alarmas programadas
+            AlarmasProgramadasStore.limpiar(context)
+            // Limpiar cola
+            AlarmQueue.limpiar()
+            // Notificar a la UI
+            _estado.postValue(AlarmaEstado.SesionExpirada)
         }
     }
 

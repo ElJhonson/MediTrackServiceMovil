@@ -10,6 +10,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
 // data/api/AuthInterceptor.kt
+// data/api/AuthInterceptor.kt
 class AuthInterceptor(
     private val tokenProvider: () -> String?,
     private val refreshTokenProvider: () -> String?,
@@ -19,31 +20,36 @@ class AuthInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = tokenProvider()
-
-        // Hacer la petición original con el token actual
         val request = buildRequest(chain.request(), token)
         val response = chain.proceed(request)
 
-        // Si responde 401 → intentar refresh
         if (response.code == 401) {
+            // ← guardar el body antes de cerrar
+            val errorBody = response.peekBody(Long.MAX_VALUE)
             response.close()
 
-            val refreshToken = refreshTokenProvider() ?: run {
+            val refreshToken = refreshTokenProvider()
+
+            if (refreshToken.isNullOrBlank()) {
                 onSessionExpired()
-                return response
+                // ← construir nueva respuesta con el body guardado
+                return response.newBuilder()
+                    .body(errorBody)
+                    .build()
             }
 
-            // Llamar al endpoint de refresh
             val newToken = intentarRefresh(chain, refreshToken)
 
             return if (newToken != null) {
                 onTokenRefreshed(newToken)
-                // Reintentar la petición original con el nuevo token
                 val newRequest = buildRequest(chain.request(), newToken)
                 chain.proceed(newRequest)
             } else {
                 onSessionExpired()
-                response
+                // ← construir nueva respuesta con el body guardado
+                response.newBuilder()
+                    .body(errorBody)
+                    .build()
             }
         }
 
@@ -75,7 +81,6 @@ class AuthInterceptor(
             if (refreshResponse.isSuccessful) {
                 val body = refreshResponse.body?.string()
                 refreshResponse.close()
-                // Extraer el accessToken del JSON
                 Gson().fromJson(body, RefreshResponse::class.java).accessToken
             } else {
                 refreshResponse.close()

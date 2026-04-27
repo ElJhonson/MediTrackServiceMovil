@@ -1,26 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-    <!-- Despertar el dispositivo -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- Mostrar notificaciones (Android 13+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Que las alarmas sobrevivan a reinicios del dispositivo -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
-
         android:allowBackup="true"
-
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -30,6 +25,28 @@
         android:theme="@style/Theme.MediTrackService"
         android:usesCleartextTraffic="true">
 
+        <!-- SplashActivity → punto de entrada -->
+        <activity
+            android:name=".ui.splash.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MediTrackService">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- LoginActivity → sin intent-filter -->
+        <activity
+            android:name=".ui.login.LoginActivity"
+            android:exported="false"/>
+
+        <!-- MainActivity → sin intent-filter -->
+        <activity
+            android:name=".ui.main.MainActivity"
+            android:exported="false"/>
+
+        <!-- AlarmActivity -->
         <activity
             android:name=".alarm.AlarmActivity"
             android:exported="false"
@@ -46,40 +63,30 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="alarm"/>
         </service>
-
-        <!-- LoginActivity → punto de entrada de la app -->
-        <activity
-            android:name=".ui.login.LoginActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
-
-        <!-- MainActivity → sin intent-filter, solo se abre desde LoginActivity -->
-        <activity
-            android:name=".ui.main.MainActivity"
+        <service
+            android:name=".alarm.AlarmForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false"> <!-- ← no se detiene al cerrar la app -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="alarm"/>
+        </service>
+        <receiver
+            android:name=".alarm.AlarmReceiver"
             android:exported="false"/>
 
         <receiver
-            android:name=".alarm.AlarmReceiver"
-            android:exported="false" />
-
-        <!-- Receiver para los botones TOMADA / OMITIDA -->
-        <receiver
             android:name=".alarm.ActionReceiver"
-            android:exported="false" />
+            android:exported="false"/>
 
-        <!-- Receiver para reprogramar alarmas si el dispositivo se reinicia -->
         <receiver
             android:name=".alarm.BootReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
         </receiver>
-
 
     </application>
 

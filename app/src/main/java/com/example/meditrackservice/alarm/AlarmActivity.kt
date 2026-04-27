@@ -8,6 +8,8 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.addCallback
+import androidx.core.app.NotificationManagerCompat
+import androidx.work.WorkManager
 import com.example.meditrackservice.data.api.RetrofitClient
 import com.example.meditrackservice.data.local.AccionesPendientesStore
 import com.example.meditrackservice.data.local.TokenDataStoreProvider
@@ -49,16 +51,24 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // Agregar a la cola en vez de reemplazar la pantalla actual
+
+        val nuevaAlarmaId = intent.getLongExtra("alarma_id", -1)
+
+        // ← Si es la misma alarma que ya está en pantalla, ignorar
+        if (nuevaAlarmaId == alarmaId || nuevaAlarmaId == -1L) return
+
+        // ← Verificar que no esté ya en la cola
+        val yaEnCola = AlarmQueue.contiene(nuevaAlarmaId)
+        if (yaEnCola) return
+
         val nuevaAlarma = AlarmQueue.AlarmaData(
-            alarmaId = intent.getLongExtra("alarma_id", -1),
+            alarmaId = nuevaAlarmaId,
             medicinaNombre = intent.getStringExtra("medicina_nombre") ?: "Medicina",
             formaFarmaceutica = intent.getStringExtra("forma_farmaceutica") ?: "",
             fechaHora = intent.getStringExtra("fecha_hora") ?: ""
         )
-        if (nuevaAlarma.alarmaId != -1L) {
-            AlarmQueue.agregar(nuevaAlarma)
-        }
+
+        AlarmQueue.agregar(nuevaAlarma)
     }
 
     private fun cargarDatos(intent: Intent) {
@@ -87,6 +97,11 @@ class AlarmActivity : ComponentActivity() {
 
     private fun registrarAccion(alarmaId: Long, estado: String) {
         stopService(Intent(this, AlarmSoundService::class.java))
+
+        NotificationManagerCompat.from(this).cancel(alarmaId.toInt())
+
+        WorkManager.getInstance(applicationContext)
+            .cancelUniqueWork("omitir_alarma_$alarmaId")
 
         val scope = CoroutineScope(Dispatchers.IO)
         scope.launch {
