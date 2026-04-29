@@ -8,7 +8,10 @@ import retrofit2.converter.gson.GsonConverterFactory
 // data/api/RetrofitClient.kt
 object RetrofitClient {
 
-    const val BASE_URL = "http://192.168.1.113:8080/"
+    private const val BASE_URL_LOCAL = "http://192.168.0.119:8080/"
+    private const val BASE_URL_RENDER = "https://meditrackwebappback.onrender.com/"
+
+    const val BASE_URL = BASE_URL_RENDER
 
     fun create(
         tokenProvider: () -> String?,
