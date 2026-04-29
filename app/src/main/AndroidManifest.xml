@@ -23,7 +23,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MediTrackService"
-        android:usesCleartextTraffic="true">
+
+        >
 
         <!-- SplashActivity → punto de entrada -->
         <activity
