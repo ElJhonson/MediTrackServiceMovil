@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,7 +50,8 @@ import com.example.meditrackservice.data.model.AlarmaResponse
 @Composable
 fun MainScreen(
     viewModel: AlarmaViewModel,
-    onSesionExpirada: () -> Unit
+    onSesionExpirada: () -> Unit,
+    onVerHistorial: () -> Unit
 ) {
     val alarmas by viewModel.alarmas.observeAsState(emptyList())
     val estado by viewModel.estado.observeAsState()
@@ -99,6 +101,13 @@ fun MainScreen(
                     )
                 },
                 actions = {
+                    // ← Botón historial
+                    IconButton(onClick = { onVerHistorial() }) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Historial"
+                        )
+                    }
                     IconButton(onClick = { mostrarDialogo = true }) {
                         Icon(
                             imageVector = Icons.Default.ExitToApp,

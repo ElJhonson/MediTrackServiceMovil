@@ -16,6 +16,7 @@ import androidx.activity.viewModels
 import com.example.meditrackservice.alarm.AlarmForegroundService
 import com.example.meditrackservice.data.local.AlarmasProgramadasStore
 import com.example.meditrackservice.sync.SyncScheduler
+import com.example.meditrackservice.ui.historial.HistorialActivity
 import com.example.meditrackservice.ui.login.LoginActivity
 import com.example.meditrackservice.ui.theme.MediTrackServiceTheme
 
@@ -50,10 +51,15 @@ class MainActivity : ComponentActivity() {
             MediTrackServiceTheme {
                 MainScreen(
                     viewModel = viewModel,
-                    onSesionExpirada = { irAlLogin() }
+                    onSesionExpirada = { irAlLogin() },
+                    onVerHistorial = { irAHistorial() } // ← agregar
                 )
             }
         }
+
+    }
+    private fun irAHistorial() {
+        startActivity(Intent(this, HistorialActivity::class.java))
     }
 
     override fun onResume() {

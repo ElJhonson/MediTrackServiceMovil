@@ -34,4 +34,11 @@ interface ApiService {
         @Path("id") id: Long,
         @Query("estado") estado: String
     ): ResponseBody
+
+    @GET("alarmas/historial")
+    suspend fun obtenerHistorial(
+        @Query("pacienteId") pacienteId: Long? = null,
+        @Query("fechaInicio") fechaInicio: String? = null,
+        @Query("fechaFin") fechaFin: String? = null
+    ): List<AlarmaResponse>
 }
