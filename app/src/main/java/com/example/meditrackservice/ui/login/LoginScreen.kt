@@ -98,7 +98,7 @@ fun LoginScreen(
                 // Teléfono
                 OutlinedTextField(
                     value = telefono,
-                    onValueChange = { telefono = it },
+                    onValueChange = { if (it.length <= 10) telefono = it  },
                     label = { Text("Teléfono") },
                     leadingIcon = {
                         Icon(Icons.Default.Phone, contentDescription = null)

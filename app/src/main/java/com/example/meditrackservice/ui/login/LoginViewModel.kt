@@ -33,6 +33,7 @@ class LoginViewModel(private val context: Application) : AndroidViewModel(contex
         )
     }
 
+    // ui/login/LoginViewModel.kt
     fun login(telefono: String, contrasena: String) {
 
         if (telefono.isBlank() || contrasena.isBlank()) {
@@ -45,6 +46,18 @@ class LoginViewModel(private val context: Application) : AndroidViewModel(contex
 
             try {
                 val response = apiService.login(LoginRequest(telefono, contrasena))
+
+                // ← Verificar el rol antes de guardar
+                val rol = extraerRolDelToken(response.accessToken)
+
+                if (rol != "PACIENTE") {
+                    _loginState.value = LoginState.Error(
+                        "Esta app es solo para pacientes. " +
+                                "Por favor usa la aplicación web."
+                    )
+                    return@launch
+                }
+
                 tokenDataStore.guardarTokens(response.accessToken, response.refreshToken)
                 _loginState.value = LoginState.Success
 
@@ -56,10 +69,29 @@ class LoginViewModel(private val context: Application) : AndroidViewModel(contex
                 _loginState.value = LoginState.Error(mensaje)
 
             } catch (e: Exception) {
-                Log.e("LoginViewModel", "Error: ${e::class.simpleName} - ${e.message}")
-
+                Log.e("LoginViewModel", "Exception: ${e::class.java.name} - ${e.message}")
                 _loginState.value = LoginState.Error("Sin conexión a internet")
             }
+        }
+    }
+
+    // ← Extraer el rol del JWT sin librería externa
+    private fun extraerRolDelToken(token: String): String? {
+        return try {
+            val parts = token.split(".")
+            if (parts.size < 2) return null
+
+            val payload = parts[1]
+            // Agregar padding si es necesario
+            val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
+            val decoded = String(android.util.Base64.decode(padded, android.util.Base64.URL_SAFE))
+
+            // Extraer el campo "rol" del JSON
+            val regex = """"rol"\s*:\s*"([^"]+)"""".toRegex()
+            regex.find(decoded)?.groupValues?.get(1)
+        } catch (e: Exception) {
+            Log.e("LoginViewModel", "Error al decodificar token: ${e.message}")
+            null
         }
     }
 }
